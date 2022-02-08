@@ -1,0 +1,701 @@
+---
+output:
+  html_document: default
+  pdf_document: default
+---
+# Computational Questions
+
+
+# 1)
+## a.
+
+```{r}
+data <- MPV::table.b6
+str(data)
+```
+
+```{r}
+model <- lm(y~x1 +x4, data)
+summary(model)
+```
+
+
+  At 5%, t critical value with degrees of freedom 25 is 2.060, so we may conclude that x4 does not have statistically significant linear association with y while x1 has significant contribution to the model.
+
+  The estimated regression function is $\hat{y} = 0.0048333 - 0.3449837x_{1} - 0.0001430x_{4}$
+
+
+## b.
+
+
+  In this case, we are interested in testing that all the slope parameters are zero. In part a at the summary of the model, we found that F.statistic= 24.66 with p-value= 0.000 which means significant. The null hypothesis can be rejected. Hence, the p-value for the F test which is based on the overall significance of the model can suggest that at least one of the regressors in the model is significant.
+
+```{r}
+anova(model)
+```
+
+  Let's calculate the F.statistic step by step and compare with the one produced by R.
+
+```{r}
+y<- as.matrix(data$y)
+x <- data[,c(2,5)]
+x$x0 <- 1
+x <- x[,c(3,1,2)]
+x <- as.matrix(x)
+xtx <- t(x) %*% x
+xtx
+```
+```{r}
+xtx1 <- solve(xtx)
+xtx1
+```
+
+```{r}
+betahat <- xtx1 %*% t(x) %*% y
+betahat
+```
+
+```{r}
+sst <-sum(y^2) - sum(y)^2/28
+ssr <- t(betahat) %*% t(x) %*%y -sum(y)^2/28
+ssres <- sst-ssr
+msr <- ssr/2
+msres <- ssres/(28-3)
+f <- msr/msres
+```
+
+```{r}
+anova.table <- data.frame("Sources of variation" = c("Regression", "Residual"
+, "Total"), "Sum of Squares" = c(ssr, ssres, sst), "Degrees of Freedom"=c
+(2,25,27), "Mean Squares" = c(msr, msres," "), "F0"=c("F"=f,
+" ", " "), stringsAsFactors = F)
+anova.table
+```
+
+
+  As $F0=24.66 > F(2,25,5)$, we can reject the null hypothesis ans conclude that at least one of the covariates is significant.
+
+
+## c.
+
+```{r}
+ssr/sst
+
+1- (ssres/(25))/(sst/27)
+```
+
+  $R^2= 66.4\%,\ R^2adj= 63.7\%$
+
+
+## d.
+
+  critical value(for a 95% CI):
+```{r}
+qt(0.025, 25, lower.tail = F)
+```
+
+
+  t test for determining the contribution of x1:
+```{r}
+b1_t <- betahat[2] /sqrt(msres * xtx1[2,2])
+b1_t
+
+```
+
+
+  t test for determining the contribution of x4:
+```{r}
+b4_t <- betahat[3] /sqrt(msres * xtx1[3,3])
+b4_t
+
+```
+
+
+  Or, we can simply look at the summary table for those t values we computed above. We can check p-values for the individual regression parameters corresponding to the regressors.
+
+  For testing $HO: \beta1= 0\ vs\ H1: \beta1 \neq 0\,\ the\ p-value\ is \sim 0.000274 < 0.05$. So, the concentration of $COCl_{2}$ (x1) has significant contribution to the model.
+
+  For testing $HO: \beta4= 0\ vs\ H1: \beta4 \neq 0\,\ the\ p-value\ is \sim 0.986 > 0.05$. The null hypothesis is not rejected. We may conclude that the mole fraction (x4) does not have statistically significant linear association with the concentration of $NbOCl_{3}$ (y). To conclude, Xl is significant while X4 is not.
+
+
+```{r}
+summary(model)
+```
+
+
+## e.
+
+  The correlation matrix:
+```{r}
+cor(data)
+```
+
+
+  VIF for each predictor variable in the model:
+```{r}
+library(car)
+vif(model)
+```
+
+
+  As a result, multicollinearity does not appear to be a concern. 
+
+
+## f.
+
+```{r}
+df <- data[,c(1,2,5)]
+knitr::kable(df)
+```
+
+
+```{r}
+model <- lm(y~., df)
+ti <- rstudent(model)
+qqnorm(ti)
+qqline(ti, col = "steelblue", lwd = 1.5)
+```
+
+
+
+  By looking at the Normal Q-Q plot of residuals, we can evaluate the normality assumption. Almost all the residuals lie well along the 45° line in the Q-Q plot, so we may assume that normality holds here.
+
+```{r}
+shapiro.test(ti)
+```
+
+
+
+  By conducting a Shapiro-Wilk test, we get the p-value as 0.5152 which is greater than 0.05, therefore we can not reject the null hypothesis and we should conclude that the residuals are normally distributed. There does not seem to be a problem with normality.
+
+
+## g.
+
+```{r}
+plot(fitted.values(model), model$residuals)
+abline(h=0, col="orange")
+```
+
+
+
+  The data exhibits nonlinear relation between the response and the regressors. We might consider transformations that can capture the relation between the independent variables and response. Also, adding higher terms for the regressors can solve the problem.
+
+
+## h.
+
+```{r}
+model.x4 <- lm(y~x4, data)
+x4.x1.model <- lm(x1~x4, data)
+plot(x4.x1.model$residuals,model.x4$residuals, xlab="ei(x1|x4)", ylab="ei(y|x4)")
+```
+
+
+```{r}
+model.x1 <- lm(y~x1, data)
+x1.x4.model <- lm(x4~x1, data)
+plot(x1.x4.model$residuals,model.x1$residuals, xlab="ei(x4|x1)", ylab="ei(y|x1)")
+```
+
+
+
+  An added variable plot shows that the relationship between the response variable and one of the prediction in the regression models after controlling for the presence of the other predictors. The first plot shows the residuals obtained by regressing x1 on the other predictor(x4) in the model versus the residuals which are obtained from the model regressing y on x4 in the model. 
+
+  So, adding x1 to the model might improve the fitted regression equation when x4 is in the model. However, x4 seems not to have important contribution to the model with x1. That is, model can be constructed without x4, due to the fact that xl shows a linear pattern but x4 does not.
+
+
+## i.
+
+```{r}
+inf.measures <- influence.measures(model)
+inf.measures <- data.frame(inf.measures$infmat)
+influence.measures(model)
+```
+ 
+  By using influence.measure function, we obtained a set of influential observations whom cutoff values determined by R itself. Now, let's check whether we would get different results with our calculations or not.
+
+
+Cutoff values and decision criteria:
+
+
+•	 hat matrix = 2p/n = (2*3)/28 = 0.2143, hii > 0.2143 value can be used to detect high leverage points.
+
+•	 cook's d, if Di >1, the point is considered as influential.
+
+•	 dfbetas, $2/\sqrt{n} = 2/\sqrt{28} = 0.378$, if |DFBETASi| > 0.378, ith observation has considerable influence on $\hat{\beta}_{j(i)}$.
+
+•	 dffits, $2\sqrt{p/n} = 2\sqrt{3/28} = 0.6547$, if |DFFITSi| > 0.6547, ith point is potential influential for the fitted values.
+
+•  covratio
+ 	** If COVRATIO > 1, the ith observation improves the precision of estimation, while if COVRATIO < 1, the ith observation can decrease the precision.
+ 	** If COVRATIO > 1 + 3p/n, (1+(3*3)/28 = 1.32) or if COVRATIO < 1− 3p/n, (1-(3*3)/28 = 0.679), then the ith point should be considered influential. The lower bound is only appropriate when n>3p (28 > 3*3).
+
+
+```{r}
+library(dplyr)
+```
+
+
+```{r}
+filter(inf.measures, hat > 0.2143) %>% select(hat)
+```
+
+Observations 21,26,27 and 28 seem to high leverage points
+
+```{r}
+filter(inf.measures, cook.d > 1)
+```
+
+No influential points based on Cook's Distance measure.
+
+```{r}
+filter(inf.measures, abs(dffit) > 0.6547) %>% select(dffit)
+```
+
+```{r}
+filter(inf.measures, abs(dfb.x1) > 0.378) %>% select(dfb.x1)
+```
+
+```{r}
+filter(inf.measures, abs(dfb.x4) > 0.378) %>% select(dfb.x4)
+```
+
+```{r}
+filter(inf.measures, cov.r > 1.32) %>% select(cov.r)
+```
+
+```{r}
+filter(inf.measures, cov.r < 0.679) %>% select(cov.r)
+```
+
+
+
+
+
+# 2) 
+## a.
+
+```{r}
+data <- MPV::table.b9
+str(data)
+```
+
+
+```{r}
+lm.model <- lm(y~., data)
+summary(lm.model)
+```
+ 
+  x2 and x3 contribute to the model. x1 variable not significant even at 10% significance level.
+
+```{r}
+ti <- rstudent(lm.model)
+qqnorm(ti)
+qqline(ti)
+```
+
+ The normal probability plot actually has the classical appearance of residuals that are predominantly normal bu have some outlier values. So, the normality of the residuals is in doubt.
+
+```{r}
+shapiro.test(ti)
+```
+
+  There is no problem with normality.
+
+```{r}
+plot(lm.model$fitted.values, ti)
+abline(h=0, col="green")
+```
+
+```{r}
+model.wox1 <- lm(y~x2+x3+x4, data)
+x1.model <- lm(x1~x2+x3+x4, data)
+plot(x1.model$residuals,model.wox1$residuals, xlab="ei(x1|x2,x3,x4)", ylab="ei(y|x2,x3,x4)")
+```
+  
+  When all other regressor variables in the model adding x1 gives almost no additional information.
+
+```{r}
+model.wox2 <- lm(y~x1+x3+x4, data)
+x2.model <- lm(x2~x1+x3+x4, data)
+plot(x2.model$residuals,model.wox2$residuals, xlab="ei(x2|x1,x3,x4)", ylab="ei(y|x1,x3,x4)")
+```
+  
+  There is a positive relationship and in fact the slope of this shape is going to give us $\hat{\beta}_{2}$.
+
+```{r}
+model.wox3 <- lm(y~x1+x2+x4, data)
+x3.model <- lm(x3~x1+x2+x4, data)
+plot(x3.model$residuals,model.wox3$residuals, xlab="ei(x3|x1,x2,x4)", ylab="ei(y|x1,x2,x4)")
+```
+  
+  The above plot shows a positive linear relationship as well.
+
+```{r}
+model.wox4 <- lm(y~x1+x2+x3, data)
+x4.model <- lm(x4~x1+x2+x3, data)
+plot(x4.model$residuals,model.wox4$residuals, xlab="ei(x4|x1,x2,x3)", ylab="ei(y|x1,x2,x3)")
+```
+  
+  X4 has a nonlinear pattern so we may need a transformation (${x}_{4}^{2}$ or $1/{x}_{4}$).
+
+
+## b.
+
+  In general, we apply transformations of the x-variables when there are strong non-linear trends in one or more residual plots. In addition to this, we apply transformations of the y-variable when there is evidence of non-normality and/or non-constant variance problems in one or more residual plots.
+  
+  Now, we have to fix the non-linearity problem. First, let's try transformation on x4 because transforming the x values primarily corrects the non-linearity. Later on, we would try transforming the y values due to the fact that it may also help the non-linearity.
+
+
+```{r}
+data1 <- data.frame(data)
+data1$x11 <- (1/(data1$x4))
+data1$x4 <- NULL
+str(data1)
+```
+
+```{r}
+lm.model <- lm(y~., data1)
+summary(lm.model)
+```
+
+```{r}
+model.wox11 <- lm(y~x1+x2+x3, data1)
+x11.model <- lm(x11~x1+x2+x3, data1)
+plot(x11.model$residuals,model.wox11$residuals, xlab="ei(x11|x1,x2,x3)", ylab="ei(y|x1,x2,x3)")
+```
+  
+  
+  However, there is still problem. A natural log transformation on y might be helpful. 
+
+```{r}
+data2 <- data.frame(data)
+data2$y <- log(data2$y)
+str(data2)
+```
+
+```{r}
+lm.model <- lm(y~., data2)
+summary(lm.model)
+```
+
+```{r}
+model.wox4 <- lm(y~x1+x2+x3, data2)
+x4.model <- lm(x4~x1+x2+x3, data2)
+plot(x4.model$residuals,model.wox4$residuals, xlab="ei(x4|x1,x2,x3)", ylab="ei(y|x1,x2,x3)")
+```
+
+```{r}
+ti <- rstudent(lm.model)
+qqnorm(ti)
+qqline(ti)
+```
+
+```{r}
+plot(lm.model$fitted.values, ti)
+abline(h=0, col="blue")
+```
+
+```{r}
+par(mfrow = c(2, 2))
+plot(lm.model)
+```
+
+
+ Working with the ln of the predictor seems to have helped.
+
+
+
+# 3)
+## a.
+
+```{r}
+data <- MPV::table.b3
+str(data)
+```
+
+```{r}
+model <- lm(y~x10+x11, data)
+summary(model)
+```
+ 
+  The equation of the fitted least square line is; $\hat{y} = 39.1919052 - 0.00474847x_{10} - 2.6958431x_{11}$
+  
+  As $t_{29,0.05} = 1.699 > t_{0} = -1.361$ and $p = 0.184$, which is insignificant (more than 0.05), the null hypothesis ($H_{0} : {\beta}_{11}= 0$) can not be rejected at 10% significance level. Therefore, we can conclude that there is not a statistically significance linear relationship between the type of transmission and the mileage performance.
+  
+  
+## b.
+
+```{r}
+model2 <- lm(y~x10*x11, data)
+summary(model2)
+```
+  
+  
+  The equation of the fitted least square line is; $\hat{y} = 58.108420 - 0.012517x_{10} - 26.724910x_{11} + 0.009035x_{10}x_{11}$
+  
+  There is a significant interaction between vehicle weight and the type of transmission.
+  
+  When $x_{11}=1$, $\hat{y} = (58.1 - 26.7) + (-0.0125 + 0.009)x_{10}= 31.4-0.0035x_{10}$ which indicates that for every additional vehicle weight, the average mileage performance decreases by 0.0035.
+  
+   When $x_{11}=0$, $\hat{y} = 58.1-0.0125x_{10}$ which indicates that on average for every increase on vehicle weight, the mileage performance decreases by 0.0125.
+
+
+# 4)
+## a.
+
+```{r}
+data <- data.frame(carbonation=c(2.6, 2.4, 17.32, 15.6,16.12,5.36,6.19,10.17,2.62,2.98,6.92,7.06), temperature=c(31,31,31.5,31.5,31.5,30.5,31.5,30.5,31,30.5,31,30.5), pressure=c(21,21,24,24,24,22,22,23,21.5,21.5,22.5,22.5))
+```
+
+```{r}
+model = lm(data$carbonation~polym(data$temperature,data$pressure, degree=2, raw=TRUE))
+summary(model)
+```
+
+
+The fitted second- order polynomial regression equation is;  $\hat{y} = 3025.3186 - 194.2729x_{1} - 6.05079x_{2} + 3.6259x_{1}^{2} + 1.1542x_{2}^{2} - 1.3317x_{1}x_{2}$
+
+
+## b.
+  
+```{r}
+anova(model)
+```
+  
+  
+  From the summary(model) function used above, we found that  F-statistic = 177.17 with p = 0.000 which is significant.
+  
+
+## c.
+
+```{r}
+stemp<-data$temperature^2
+spres<-data$pressure^2
+model1<-lm(data$carbonation~temperature+pressure+stemp+spres+temperature*pressure, data)
+summary(model1)
+```
+
+
+```{r}
+car::Anova(model1, type="III")
+```
+
+```{r}
+model2<-lm(data$carbonation~temperature+pressure+stemp+spres, data)
+summary(model2)
+```
+```{r}
+car::Anova(model2, type="III")
+```
+
+
+  Hand calculation: $F_{0}= \frac{SSE_{R}-SSE_{F}}{df_{R}-df_{F}}÷ \frac{SSE_{F}}{df_{F}}$
+
+  3.1494 - 2.3022 = 0.8472
+  0.8472 / (2.3022 / 6) = 2.2079
+
+  $F_{0}=2.21 \sim \text{F(1,6,0.05)=5.99}$ which is not significant and indicates that the interaction term does not contribute significantly to the model.
+
+
+
+## d.
+
+  The p value corresponding to the t statistic for quadratic term $x_{1}^2$ is greater than the significance level $\alpha$ = 0.05. The p value corresponding to the t statistic for quadratic term $x_{2}^2$ is less than the significance level $\alpha$ = 0.05.
+
+  To conclude, the quadratic term for $x_{2}$ contributes significantly to the model while the quadratic
+term for $x_{1}$ does not.
+
+
+## e.
+
+
+```{r}
+ti <- rstudent(model2)
+qqnorm(ti)
+qqline(ti, col = "orange", lwd = 1.5)
+```
+
+  The residuals seem to be from a normal distribution.
+  
+```{r}
+plot(fitted.values(model2), model2$residuals)
+abline(h=0, col="purple")
+```
+
+  There seems no pattern in the fitted values vs the residuals plot. In overall, they seem to equally spread around the zero line. So, constant variance assumption might be satisfied.
+
+
+```{r}
+summary(influence.measures(model2))
+```
+
+  Observation 7 is influential which affects the plots.
+
+
+
+# Proof Questions
+
+## a.
+
+$\hat{\beta}_{xy}$ is the slope in the regression line X on Y.
+
+$\hat{\beta}_{yx}$ is the slope in the regression line Y on X.
+
+
+$\hat{\beta}_{xy} = \frac {Cov(y,x)}{Var(y)} = r_{xy} \frac {\sigma_{x}}{\sigma_{y}}$ x on y
+
+$\hat{\beta}_{yx} = \frac {Cov(x,y)}{Var(x)} = r_{xy} \frac {\sigma_{y}}{\sigma_{x}}$ y on x
+
+
+$\hat{\beta}_{xy}\hat{\beta}_{yx}= r_{xy} \frac {\sigma_{x}}{\sigma_{y}}r_{xy} \frac {\sigma_{y}}{\sigma_{x}}=r^{2}$
+
+  NOTE:
+
+r is the correlation of determination
+
+$\sigma_{x}$ is standard deviation of x
+
+$\sigma_{y}$ is standard deviation of y
+
+$r = \frac {Cov(x,y)}{\sigma_{x}\sigma_{y}}$ correlating x with y
+
+$r = \frac {Cov(y,x)}{\sigma_{y}\sigma_{x}}$ correlating y with x
+
+
+
+## b.
+
+
+$d_{i} = \frac {e_{i}}{\sqrt{MS_{res}}}$
+
+$r_{i} = \frac {e_{i}}{\sqrt{{MS_{res}}(1-hii)}}$
+
+$r_{i} \geq d_{i}$ (usually) since
+
+$Var(e_{i})={\sigma^{2}}(1-hii)$ shows that $Var(e_{i})\geq0$
+
+$Cov(e_{i},e_{j})=-{\sigma^{2}}hii \neq0$ shows that $Cov(e_{i},e_{j})<0$ and so $0 \leq hii \leq 1$
+
+$0 \leq 1- hii \leq 1$
+
+$0 \leq MS_{res}(1 - hii) \leq MS_{res}$
+
+$\sqrt{MS_{res}(1 - hii)} \leq \sqrt{MS_{res}}$ (as long as both sides $\geq1$)
+
+$\frac {e_{i}}{\sqrt{{MS_{res}}(1-hii)}} \geq \frac {e_{i}}{\sqrt{MS_{res}}}$
+
+
+## c.
+
+
+$Y = \beta_{0} + \beta_{1}X_{1} + \beta_{2}X_{2} + \epsilon$
+
+$R^{2} = 1- \frac {SSE(X_{1},X_{2})}{SST}$
+
+  When we regress $Y$ on $\hat{Y}$, SST does not change and the fitted regression equation turns into;
+  
+$\hat{Y}^{*} =  \beta_{0}^{*} + \beta_{1}^{*}\hat{Y}$
+
+\[
+\beta_{1}^{*} = \frac{ \sum(\hat{Y}-\bar{Y} ) \sum ({Y}- \bar{Y} )}{ \sum (\hat{Y}-\bar{Y})}
+= \frac{ \sum(\hat{Y}-\bar{Y} )[ ({Y}- \hat{Y} )+( \hat{Y}- \bar{Y})]}{ \sum (\hat{Y}-\bar{Y})}
+\]
+
+\[\beta_{1}^{*}= \frac{ \sum(\hat{Y}-\bar{Y} )[ e_{i}+( \hat{Y}- \bar{Y})]}{ \sum (\hat{Y}-\bar{Y})}=1\]
+
+$\beta_{0}^{*}=\bar{Y}-\beta_{1}^{*}\bar{Y}=0$
+
+  Therefore $\hat{Y} = \hat{Y}^{*}$
+
+
+$SSE(\hat{Y}) =  \sum({Y}-\hat{Y}^{*})^{2} = \sum({Y}-\hat{Y})^{2} = {SSE(X_{1},X_{2})}$
+
+
+  To conclude
+
+\[r^{2} = 1- \frac {SSE(\hat{Y})}{SST} = 1- \frac {SSE(X_{1},X_{2})}{SST} = R^{2}\]
+
+
+
+## d.
+
+
+SSR(X1,X2,X3,X4) = SSR(X1) + SSR(X2,X3|X1) + SSR(X4|X1,X2,X3)
+
+Recall that: SSR(X2,X3|X1) = SSR(X1,X2,X3) - SSR(X1)
+
+SSR(X1) + SSR(X1,X2,X3) - SSR(X1) + SSR(X1,X2,X3,X4) - SSR(X1,X2,X3) = SSR(X1,X2,X3,X4)
+
+We can easily prove that SSR(X1,X2,X3,X4) = SSR(X1) + SSR(X2,X3|X1) + SSR(X4|X1,X2,X3)
+
+
+## e.
+
+$Var(e_{i})={\sigma^{2}}(1-hii)$
+
+$e = y-\hat{y}$ (omit the tildes just for simplicity)
+
+$= y-X\hat{\beta}$
+
+$= y-X(X'X)^{-1}X'y$
+
+$= (I- X(X'X)^{-1}X')y$
+
+$e = (I-H)y$
+
+$Cov(e)_{nxn} = \begin{bmatrix} Var(e_{1}) & Cov(e_{1},e_{2}) & ... \\ ... & ... & ... \end{bmatrix}$
+
+$Cov((I-H)y) = (I-H){\sigma^{2}}(I-H)'= {\sigma^{2}}(I-H)$
+
+$= {\sigma^{2}}\begin{bmatrix} 1-h_{11} & -h_{12} & ... \\ ... & ... & ... \end{bmatrix}$
+
+$Var(e_{i})={\sigma^{2}}(1-hii)$
+
+$Cov(e_{i},e_{j})=-{\sigma^{2}}hii \neq0$
+
+  The covariance between the two residuals is not zero so they are not uncorrelated, but as long as sample size is large compare to number of parameters in the model, this correlation structure is not going to create any problem.
+
+
+
+# Reasoning Questions
+
+
+## a.
+
+  While the population regression function is constructed through the usage of entire population data, the sample regression function is constructed using only a small sample of data. PRF is robust to the entire population of the data set, however SRF is not. Furthermore, SRF does not contain the high accuracy property due to the fact that it is biased towards any new data that can come from the same population. Their main distinction is the sample regression function can be identified as an estimator when its data came from the given population.
+  
+
+## b.
+
+  We need to check what is the sign of the estimated coefficient because it shows the direction of the relationship between the predictor variable and the dependent variable. If the estimated slope/coefficient is negative, there can be concluded a negative relationship between predictor and dependent variables. This indicates that as the independent variable increases dependent variable tends to decrease. And, this situation is simply the other way around for a positive sign.
+
+  
+## c.
+
+  In the regression table, the p-value is given for all individual independent variables, if the p-value is less than 0.05 we interpret that the independent variable has a statistically significant impact in predicting dependent variable. The situation in which the corresponding p-value is greater than 0.05, we conclude that it is insignificant. The point we need to pay attention is the multicollinearity problem, a small rounding can cause a huge difference in the results, if the columns of X are linearly dependent. Due to multicollinearity, the standard error of estimates can be inflated, causing wider confidence intervals for individual parameters and smaller t-statistics for testing whether the individual regression coefficients are zero or not. Furthermore, sometimes we might need to standardized our covariances to make them comparable with each other. After the standardization, when we wish to calculate which independent variable has more effect on the dependent variable, we can look at the magnitudes of the regression coefficients showing the effects over dependent variable.
+
+
+
+## d.
+
+  ANOVA and regression analysis are equivalent two things at some points; for instance when they use an identical encoding and interested in the same hypotheses. However, the models differ in their basic aims: major concern of the regression analysis the accuracy of the model and regression analysis aims to quantify effect sizes whereas ANOVA is mainly a method which allows to check how much the residual variance is reduced by explanatory variables in the model. The regression analysis is a complementary tool to asses the quantitative relation between the independent variable and the dependent variable, however ANOVA can be applied to any regression model that contains continuous, categorical, or both kinds of predictors.
+
+
+## e.
+
+  Start with building a scatter plot might be very helpful. The distribution of the observations enables us to formulate the model. As a second step, after determining the values of parameters, we could fit the regression line and infer the relationship between independent and dependent variables. The last step is (model adequacy checking) the evaluating the validity and usefulness of the model. It is better to check homogeneity of variance and the model specification before investigating the normality assumption as the residuals may seem normal when these characteristics are not satisfied. 
+
+
+# Research Question
+
+  R provides convenience for us to use some functions rather than calculating each step by hand. influence.measures function is one of them and its cutoff values are predetermined by R, therefore we might get different values in other words a different set of influential points with this function. The cutoff values used by this function are;
+  
+  $dfbetas > 1$
+  $dffits > 3\sqrt{(p/(n-p)}$
+  $1-covariance.ratio > 3p/(n-p)$
+  $pf(cooks.d,p, n-p) > 0.5$
+  $hat value > 3p/n$
+  
+  All in all, being aware of the built-in functions of R is really important for the sake of the analysis, otherwise we might delete the wrong values form the dataset and reach different conclusion.
+
+
